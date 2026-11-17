@@ -1,6 +1,5 @@
 # kubernetesproject2 – Jupiter site + API + MySQL (Docker → CI/CD → Docker Hub → kind)
 
-A practice project for Docker, CI/CD and Kubernetes.
 
 It started as the public image `get2kunle/staticsite:latest`, an nginx container serving the
 "Jupiter" one-page HTML template. That image was taken apart and rebuilt as a small 3-tier app:

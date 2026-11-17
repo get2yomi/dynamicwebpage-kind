@@ -1,4 +1,69 @@
+# ---------------------------------------------------------------
+# NOTE: the website's images/fonts in web/html/assets are NOT ignored.
+# CI builds the Docker image from this repo, so they must be committed.
+# ---------------------------------------------------------------
+
+# Dependencies (reinstalled by `npm ci` in CI and in the Dockerfile)
 node_modules/
+.npm/
+
+# Build output / caches
+dist/
+build/
+coverage/
+.cache/
+
+# Secrets and local settings
 .env
+.env.*
+!.env.example
+
+# Logs
 *.log
+logs/
+
+# Local MySQL data, dumps and backups (can be huge)
+mysql-data/
+mysqldata/
+*.sql.gz
+*.dump
+*.bak
+backup/
+# keep the schema file: mysql/init.sql is NOT ignored
+
+# Archives, installers and binaries
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.7z
+*.rar
+*.exe
+*.msi
+*.iso
+
+# Docker image exports (docker save) and video recordings
+*.docker
+*.oci
+*.mp4
+*.mov
+*.avi
+
+# Kubernetes / kind local files
+kubeconfig
+*.kubeconfig
+.kube/
+
+# Local tools and temp files
 .local/
+tmp/
+temp/
+
+# Editor / OS clutter
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
