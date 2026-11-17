@@ -1,0 +1,15 @@
+{
+  "name": "jupiter-api",
+  "version": "1.0.0",
+  "description": "Small API for the Jupiter static site: saves newsletter emails in MySQL (optional)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5"
+  }
+}

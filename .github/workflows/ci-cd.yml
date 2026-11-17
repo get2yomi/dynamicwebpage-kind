@@ -1,0 +1,103 @@
+# CI/CD for kubernetesproject2
+#
+# On every push / pull request:
+#   1. test        - installs the API and runs its unit tests
+#   2. smoke-test  - builds both images and runs the whole stack with docker compose,
+#                    once WITHOUT MySQL and once WITH MySQL, and checks it really works
+# On a push to main (or a manual run):
+#   3. push        - builds and pushes both images to Docker Hub:
+#                      <DOCKERHUB_USERNAME>/staticsite:latest      and  :sha-<commit>
+#                      <DOCKERHUB_USERNAME>/staticsite-api:latest  and  :sha-<commit>
+#
+# Required GitHub repository secrets (Settings > Secrets and variables > Actions):
+#   DOCKERHUB_USERNAME  - e.g. get2kunle
+#   DOCKERHUB_TOKEN     - a Docker Hub access token (Docker Hub > Account settings > Personal access tokens)
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  smoke-test:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose -f docker-compose.yml -f docker-compose.mysql.yml build
+
+      - name: Run WITHOUT MySQL
+        run: |
+          docker compose up -d
+          for i in $(seq 1 30); do curl -sf http://localhost:8080/api/health && break; sleep 2; done
+          curl -sf http://localhost:8080/ | grep -q "Jupiter"
+          curl -s http://localhost:8080/api/health | grep -q '"not configured"'
+          # subscribe must be refused politely (503) when there is no database
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+                 -d '{"email":"ci@example.com"}' http://localhost:8080/api/subscribers)" = "503"
+          docker compose down
+
+      - name: Run WITH MySQL
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.mysql.yml up -d
+          for i in $(seq 1 60); do
+            curl -s http://localhost:8080/api/health | grep -q '"connected"' && break; sleep 3
+          done
+          curl -s http://localhost:8080/api/health | grep -q '"connected"'
+          curl -sf -X POST -H 'Content-Type: application/json' \
+               -d '{"email":"ci@example.com"}' http://localhost:8080/api/subscribers
+          curl -sf http://localhost:8080/api/subscribers | grep -q "ci@example.com"
+
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.mysql.yml logs
+
+      - name: Clean up
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.mysql.yml down -v
+
+  push:
+    needs: smoke-test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: staticsite
+            context: ./web
+          - name: staticsite-api
+            context: ./api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.name }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.name }}:sha-${{ github.sha }}

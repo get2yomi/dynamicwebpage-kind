@@ -1,0 +1,12 @@
+# WITHOUT MySQL: DB_HOST is empty.
+# k8s/mysql/api-config-mysql.yaml replaces this ConfigMap with DB_HOST=mysql.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: jupiter
+data:
+  DB_HOST: ""
+  DB_PORT: "3306"
+  DB_NAME: "jupiter"
+  DB_USER: "jupiter"

@@ -1,0 +1,37 @@
+# Override file: adds MySQL and points the API at it.
+# Use together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.mysql.yml up -d --build
+# Passwords come from .env (copy .env.example to .env); the defaults below are for practice only.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: jupiter
+      MYSQL_USER: jupiter
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-jupiterpass}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"       # optional: lets you connect from MySQL Workbench on your laptop
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: jupiter
+      DB_USER: jupiter
+      DB_PASSWORD: ${MYSQL_PASSWORD:-jupiterpass}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:

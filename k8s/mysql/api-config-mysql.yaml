@@ -1,0 +1,13 @@
+# WITH MySQL: overrides the base api-config so the API connects to the "mysql" Service.
+# After applying, restart the API so it picks up the change:
+#   kubectl -n jupiter rollout restart deployment/api
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: jupiter
+data:
+  DB_HOST: "mysql"
+  DB_PORT: "3306"
+  DB_NAME: "jupiter"
+  DB_USER: "jupiter"

@@ -1,0 +1,26 @@
+# MODE 1 - website WITHOUT MySQL
+#   docker compose up -d --build
+#   open http://localhost:8080   -> badge says "Running without MySQL (static mode)"
+#
+# MODE 2 - website WITH MySQL (adds docker-compose.mysql.yml on top of this file)
+#   docker compose -f docker-compose.yml -f docker-compose.mysql.yml up -d --build
+#   open http://localhost:8080   -> badge says "MySQL connected"
+#
+# DOCKERHUB_USER defaults to get2kunle; images are named <user>/staticsite and <user>/staticsite-api
+services:
+  web:
+    build: ./web
+    image: ${DOCKERHUB_USER:-get2kunle}/staticsite:${TAG:-latest}
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    image: ${DOCKERHUB_USER:-get2kunle}/staticsite-api:${TAG:-latest}
+    environment:
+      PORT: "3000"
+      DB_HOST: ""          # empty = no database
+    restart: unless-stopped
